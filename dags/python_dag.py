@@ -1,27 +1,32 @@
-from datetime import datetime,timedelta
+import os
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from datetime import datetime, timedelta
 
 default_args = {
-    'owner': 'ope joseph',
-    'retries': 5,
-    'retry_delay':timedelta(minutes=2)
+    "owner": "airflow",
+    "depends_on_past": False,
+    "start_date": datetime(2025, 3, 12),
+    "email_on_failure": False,
+    "email_on_retry": False,
+    "retries": 1,
+    "retry_delay": timedelta(minutes=2),
 }
 
-def greet(name,age):
-    print("My name is", name, "and I am", age, "years old.")
-
-with DAG(
+dag = DAG(
+    "generate_transactions",
     default_args=default_args,
-    dag_id = 'python__dag_v2',
-    description = 'first_python_operator',
-    start_date= datetime(2025,3,3),
-    schedule_interval='@daily'
-) as dag:
-    task1 = PythonOperator(
-        task_id = 'task_1',
-        python_callable=greet,
-        op_kwargs={'name':'Johnson','age':'3'}
-    )
+    description="A DAG to generate and save dummy transaction data",
+    schedule_interval="0 12 * * *",
+    catchup=False,
+)
 
-    task1
+script_path = "/opt/airflow/dags/generate_transactions.py" 
+
+run_script = BashOperator(
+    task_id="run_generate_transactions",
+    bash_command=f"python {script_path}",
+    dag=dag,
+)
+
+run_script
