@@ -4,6 +4,7 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from datetime import datetime, timedelta
+from sheet_spool import upload_to_googlesheet
 import glob
 import pandas as pd
 import io
@@ -115,6 +116,21 @@ def upload_to_postgres(**context):
     return True
 
 
+def extract_sheet_data(**kwargs):
+    spreadsheet_id = "1RoB52Rk-71uQiuplol7yhLvgWHFv3v079u-yMEQEu8o"
+    rows = upload_to_googlesheet(spreadsheet_id)
+    print(f"Extracted {len(rows)} rows from Google Sheet")
+    return rows
+
+def process_sheet_data(**kwargs):
+    ti = kwargs['ti']
+    rows = ti.xcom_pull(task_ids='extract_sheet_data')
+    df = pd.DataFrame(rows)
+    print(f"Processing {len(df)} rows")
+    results = df.to_dict('records')
+    return results
+
+
 run_script = BashOperator(
     task_id="run_generate_transactions",
     bash_command=f"python {script_path}",
@@ -128,6 +144,21 @@ upload_data = PythonOperator(
     provide_context=True,
     dag=dag,
 )
+
+extract_googlesheet = PythonOperator(
+    task_id="Extract Googlesheet",
+    python_callable=extract_sheet_data,
+    provide_context=True,
+    dag=dag
+)
+
+process_sheet_data = PythonOperator(
+    task_id="Progress Googlesheet",
+    python_callable=process_sheet_data,
+    provide_context=True,
+    dag=dag
+)
+
 
 
 run_script >> upload_data
