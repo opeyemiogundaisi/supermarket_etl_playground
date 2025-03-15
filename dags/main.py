@@ -10,7 +10,7 @@ import io
 import csv
 
 default_args = {
-    "owner": "airflow",
+    "owner": "opejoseph",
     "depends_on_past": False,
     "start_date": datetime(2025, 3, 12),
     "email_on_failure": False,
@@ -41,14 +41,14 @@ def upload_to_postgres(**context):
     if not list_of_files:
         raise FileNotFoundError(f"No transaction files found in {transactions_dir}")
     
-    # Get most recent file
+
     latest_file = max(list_of_files, key=os.path.getctime)
     print(f"Loading file: {latest_file}")
     
   
     df = pd.read_csv(latest_file)
     
-    # Filter only rows where Platform = "PostgreSQL"
+
     postgres_df = df[df["Platform"] == "PostgreSQL"].copy()
     
     if postgres_df.empty:
@@ -129,5 +129,5 @@ upload_data = PythonOperator(
     dag=dag,
 )
 
-#Task dependencies
+
 run_script >> upload_data
